@@ -1,77 +1,57 @@
-﻿<?php
+<?php
 session_start();
 include ("connection.php");
-$komunikaty = '';
-
-/** Początek dodawania nowego dziennika **/
-if ($_POST['wyslij'] && $_SESSION['zalogowany']){
-$nick = $_SESSION['login'];
-$spr1 = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM dzienniki WHERE IdDziennika='".$nick."' LIMIT 1"));
-$nazwa = $_POST['name_diary'];
-$options = $_POST['opt'];
-$spr2 = strlen($nazwa);
-
-if ($spr1[0]>=1){
-$komunikaty.="Posiadasz już swój dziennik w systemie.<br />";
-$stop = true;
-}
-else{
-if ($spr2 < 4){
-$komunikaty.="Nazwa dziennika powinna zawierać co najmniej 4 znaki.<br />";
-}
-if (!($komunikaty)){
-if ($options == able){
-$opt = ''.'TAK';
-}
-else{
-$opt = ''.'NIE';
-}
-$result = mysql_query("INSERT INTO `dzienniki` (IdDziennika, Komentarze, Nazwa) VALUES ('".$nick."','".$opt."','".$nazwa."')");
-
-if ($result){
- $komunikaty.="Dziennik o nazwie ".$nazwa." został dodany";
-}
-else { 
-$komunikaty.=mysql_error();
-}
-}
-}
-
-/** Koniec dodawania nowego dziennika **/
-}
-
-
-
 ?>
+
 <?php
-if ($_SESSION['zalogowany']){
+$komunikaty ="";
+if (isset($_SESSION['zalogowany'])){
 $nick = $_SESSION['login'];
 $spr1 = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM dzienniki WHERE IdDziennika='".$nick."' LIMIT 1"));
-if ($spr1[0]>=1 && !$result){
+if ($spr1[0]>=1 && !isset($result)){
 $komunikaty.="Posiadasz już swój dziennik w systemie.<br />";
 $stop = true;
 }
 ?>
-<title>Strona glowna</title>
+<title>Strona głowna</title>
 <link rel="stylesheet" type="text/css" href="Data/cssFP.css">
 <script type="text/javascript" src="jquery-1.8.2.min.js"></script>
-
+<script>
+$(document).ready(function(){
+	$('.dodaj').click(function(){
+	var form_data = {
+			name_diary: $("#newDiary_name").val(),
+			wyslij: true,
+			opt: $("input:radio[name=opt]:checked").val(),
+			addred: 1
+		};
+	$.ajax({
+			type: "POST",
+			url: "addDiary2.php",
+			data: form_data,
+		}).done(function( response ) {
+		$("#message").html(response);
+		});
+	
+	});
+	
+});
+</script>
 </head>
 <body>
+<div id="message"></div>
 <div id="inside">
 <fieldset>
-<h4>Utworz dziennik</h4>
-<?php if ($komunikaty && !$result){ echo '<font color="red"><b>'.$komunikaty.'</b></font>';}
+<legend>Utwórz dziennik</legend>
+<?php if ($komunikaty && !isset($result)){ echo '<font color="red"><b>'.$komunikaty.'</b></font>';}
 	else { echo '<font color="blue">'.$komunikaty.'</font>';}?>
 <p>Nazwa dziennika:</p>
-<form action="addDiary.php" method="POST">
-<input type="text" id="newDiary_name" name="name_diary" size="40" value="Tutaj wpisz nazwę dziennika" required="required">
-<p>Mozliwosc komentowania wpisow</p>
-<input type="radio" name="opt" value="able" checked="yes">Wlacz<br>
-<input type="radio" name="opt" value="disable">Wylacz
+<input type="text" id="newDiary_name" name="name_diary" size="40" placeholder="Tutaj wpisz nazwę dziennika" required="required">
+<p>Możliwość komentowania wpisów:</p>
+<input type="radio" name="opt" value="able" checked="yes">Włącz<br>
+<input type="radio" name="opt" value="disable">Wyłącz
 <br><br>
-<input type="submit" class="submit" name="wyslij" value="Wyślij" <?php if ($stop) { echo'disabled="disabled"';}?>>
-</form>
+<input class="dodaj" type="submit" class="submit" name="wyslij" value="Wyślij" <?php if ($stop) { echo'disabled="disabled"';}?>>
 </fieldset>
 </div>
 <script>

@@ -1,108 +1,10 @@
 ﻿<?php
 session_start();
 include ("connection.php");
-
-/** Pytanie: Czy dopuszczamy możliwość zmiany hasła na to samo?
-
-*/
-
-/** -------------początek zmiany hasła ------------- **/
-if ($_POST['pwd'] && $_SESSION['zalogowany']){ 
-$komunikaty = '';
-$nick = $_SESSION['login'];
-$query = mysql_query("SELECT * FROM uzytkownicy WHERE Nick = '".$nick."'");
-$r = mysql_fetch_array($query);
-if (isset ($_POST['oldpassword'])){
-$old = $_POST['oldpassword'];
-$old = md5($old);
-if ($old==$r['Haslo']){
-if (isset ($_POST['newpassword'])){
-$haslo = $_POST['newpassword'];
-$spr1 = strlen($haslo);
-}
-if (isset ($_POST['vnewpassword'])){
-$vhaslo = $_POST['vnewpassword'];
-}
-if ($haslo == NULL){
-$komunikaty .= "Nie podano nowego hasła <br/>";
-}
-elseif ($vhaslo == NULL){
-$komunikaty .= "Nie potwierdzono nowego hasła <br/>";
-}
-elseif ($spr1 <4 ){
-$komunikaty .= "Nowe hasło powinno zawierać co najmniej 4 znaki<br/>";
-}
- if ($haslo != $vhaslo){
- $komunikaty.= "Podane nowe hasła nie są identyczne.<br/>";
- }
-  else{
-  if (!$komunikaty){
-  $haslo = md5($haslo);
-  $result = mysql_query("UPDATE uzytkownicy  SET Haslo='".$haslo."' WHERE Nick ='".$nick."'");
-  if (!$result){
-    die('Invalid query: ' . mysql_error());
-  }
-  else {
-  $komunikaty.="Hasło zostało zmienione poprawnie <br />";
-  }
-  }
-  }
-}
-else{
-$komunikaty.= "Podane aktualne hasło, jest nieprawidłowe. <br />";
-}
-}
-else{
-$komunikaty.= "Nie podano aktualnego hasła.<br />";
-}
-}
-/** -------------koniec zmiany hasła ------------- **/
-
-if ($_POST['edit'] && $_SESSION['zalogowany']){
-$komunikaty1 = '';
-$nick = $_SESSION['login'];
-$haslo = $_POST["password"];
-$imie = $_POST["firstname"];
-$nazwisko = $_POST["surname"];
-$email = $_POST["email"];
-$omnie = $_POST['omnie'];
-$data = $_POST['datepicker'];
-
-$query = mysql_query("SELECT * FROM uzytkownicy WHERE Nick = '".$nick."'");
-$r = mysql_fetch_array($query);
-
-$haslo = md5($haslo);
-
-if ($haslo != $r['Haslo']){
-$komunikaty.="Podane hasło jest niepoprawne.<br />";
-}
-else{
-$result1 = mysql_query("UPDATE uzytkownicy  SET Imie='".$imie."', Nazwisko='".$nazwisko."', Email='".$email."',OMnie='".$omnie."' WHERE Nick ='".$nick."'");
-  if (!$result1){
-    die('Invalid query: ' . mysql_error());
-  }
-  else {
-  $komunikaty1.="Dane zostały zmienione poprawnie. <br />";
-  }
-
-}
-
-
-
-}
-
-
-
-
-
-
-
-
-
 ?>
 
 <?php
-if ($_SESSION['zalogowany']){
+if (isset($_SESSION['zalogowany'])){
 $nick = $_SESSION['login'];
 $query = mysql_query("SELECT * FROM uzytkownicy WHERE Nick = '".$nick."'");
 $r = mysql_fetch_array($query);
@@ -119,7 +21,7 @@ $rok = substr($r['DataUr'],0,4);
 ?>
 <link href="Data/formECSS.css" type="text/css" rel="stylesheet"/>
 <title>Multimedialny dziennik podróży - edycja danych.</title>
-
+<script type="text/javascript" src="jquery-1.8.2.min.js"></script>
 <script language="javascript">  
 function dateFun(){
    var datefield=document.createElement("input")
@@ -138,56 +40,104 @@ function dateFun(){
        }
 }
 </script>  
+<script>
+$(document).ready(function(){
+	$('.editpswER').hide();
+	$('.editER').hide();
+	$('.editpsw').click(function(){
+	
+	if ($("#oldpassword").val() == "" || $("#newpassword").val() == "" || $("#vnewpassword").val() == ""){
+	$('.editpswER').show();
+	}
+	else{
+	$('.editpswER').hide();
+	var form_data = {
+			oldpassword: $("#oldpassword").val(),
+			newpassword: $("#newpassword").val(),
+			vnewpassword: $("#vnewpassword").val(),
+			pwd: true,
+			addred: 1
+		};
+	$.ajax({
+			type: "POST",
+			url: "edit2.php",
+			data: form_data,
+		}).done(function( response ) {
+		$(".message").html(response);
+		});
+	}
+	});
+	$('.editProfile').click(function(){
+	
+	if ($("#acctpassword").val() == "" || $("#firstname").val() == "" || $("#surname").val() == "" || $("#email").val() == "" || $("#omnie").val() == "" || $("#datepicker").val() == ""){
+	$('.editER').show();
+	}
+	else{
+	$('.editER').hide();
+	var form_data = {
+			password: $("#acctpassword").val(),
+			firstname: $("#firstname").val(),
+			surname: $("#surname").val(),
+			email: $("#email").val(),
+			omnie: $("#omnie").val(),
+			datepicker: $("#datepicker").val(),
+			edit: true,
+			addred: 1
+		};
+	$.ajax({
+			type: "POST",
+			url: "edit2.php",
+			data: form_data,
+		}).done(function( response ) {
+		$(".message").html(response);
+		});
+	}
+	});
+});
+</script>
 </head>
 <body>
 <div>
 Witaj, <?php echo $nick;?>
-<form name="input" method="post" action="edit.php"> <!--(do srodka) |action="html_form_action.asp" method="get"| po nacisnieciu submit - wysyla dane do html_form_action.asp --> 
 	<fieldset>
 	<legend>Edycja danych</legend><br>
 	
-	<?php if ($komunikaty1 && !$result1){ echo '<font color="red">'.$komunikaty1.'</font><br />';}
-		  elseif ($komunikaty1){ echo '<font color="blue">'.$komunikaty1.'</font><br />';}
-	?>
+	<div class="message"></div>
 	<!-- ----------------------------------------------------------------- -->
 	<!-- WAZNE!! -->
 	<!-- w value powinno byc imie uzytkownika sciagane z bazy danych (php) -->
 	<!-- ----------------------------------------------------------------- -->
-	
-	<label for="firstname">Imie:</label>     <input type='text' value="<?php echo $imie;?>"  class='pData' id='firstname' name='firstname' required="required"><br>
-	<label for="surname">Nazwisko:</label>   <input type='text' value="<?php echo $nazwisko;?>" class='pData' id='surname' name='surname' required="required"><br>
-	<label for="email">E-mail:</label>       <input type='email' value="<?php echo $email;?>" class='pData' id='email' name='email' required="required" autocomplete="off"><br><br>
-	<label for="omnie">O mnie:</label>       <input type='text' value="<?php echo $omnie;?>" class='pData' id='omnie' name='omnie'><br><br>
-	<label for="datepicker">Data Ur:</label> <input type='date'  class='pData' id='datepicker' name='datepicker' value="<?php echo $dataUr;?>" disabled="disabled"><br>
+	<div class="editER"><font color="red">Zapomniałeś o czymś?</font></div>
+	<label for="firstname">Imie:</label>     <input type='text' value="<?php echo $imie;?>"  class='firstname' id='firstname' name='firstname' required="required"><br>
+	<label for="surname">Nazwisko:</label>   <input type='text' value="<?php echo $nazwisko;?>" class='surname' id='surname' name='surname' required="required"><br>
+	<label for="email">E-mail:</label>       <input type='email' value="<?php echo $email;?>" class='email' id='email' name='email' required="required" autocomplete="off"><br><br>
+	<label for="omnie">O mnie:</label>       <input type='text' value="<?php echo $omnie;?>" class='omnie' id='omnie' name='omnie'><br><br>
+	<label for="datepicker">Data Ur:</label> <input type='date'  class='datepicker' id='datepicker' name='datepicker' value="<?php echo $dataUr;?>" disabled="disabled"><br>
 			<!-- Dla przeglądarek nieobsługujących HTML5 typ: date -->
 			<div id='dateIE' style='DISPLAY: none'><br>
-			<label for="dDateie">Dzien:  </label> <input type='text' class='pData' id='dDate' name='dDate' value="<?php echo $dzien;?>" disabled="disabled"><br>
-			<label for="mDateie">Miesiac: </label> <input type='text' class='pData' id='mDate' name='mDate' value="<?php echo $mies;?>" disabled="disabled"><br>
-			<label for="yDateie">Rok:     </label> <input type='text' class='pData' id='yDate' name='yDate'value="<?php echo $rok;?>"  disabled="disabled"><br>
+			<label for="dDateie">Dzien:  </label> <input type='text' class='dData' id='dDate' name='dDate' value="<?php echo $dzien;?>" disabled="disabled"><br>
+			<label for="mDateie">Miesiac: </label> <input type='text' class='mData' id='mDate' name='mDate' value="<?php echo $mies;?>" disabled="disabled"><br>
+			<label for="yDateie">Rok:     </label> <input type='text' class='yData' id='yDate' name='yDate'value="<?php echo $rok;?>"  disabled="disabled"><br>
 			<!-- -------------------------------------------------------------- -->
 			</div>
-	<label for="password">Potwierdz zmiany haslem:</label>	 <input type='password' value="" class='pData' id='password' name='password' required="required"><br>
-	<input type="submit" style="float:right" class="submit" name="edit" value="Zapisz zmiany">
+	<label for="password">Potwierdz zmiany haslem:</label>	 <input type='password' value="" class='acctpassword' id='acctpassword' name='password' required="required"><br>
+	<input type="submit" style="float:right" class="editProfile" name="edit" value="Zapisz zmiany">
 	</fieldset>
 </form>
 </div>
-<div id="container">
-<form name="input" method="post" action="edit.php"> <!--(do srodka) |action="html_form_action.asp" method="get"| po nacisnieciu submit - wysyla dane do html_form_action.asp --> 
+<div id="container"> <!--(do srodka) |action="html_form_action.asp" method="get"| po nacisnieciu submit - wysyla dane do html_form_action.asp --> 
 	<fieldset>
 	<legend>Zmiana hasla</legend><br>
-	<?php if ($komunikaty && !$result){ echo '<font color="red">'.$komunikaty.'</font><br />';}
-		  elseif ($komunikaty){ echo '<font color="blue">'.$komunikaty.'</font><br />';}
-	?>
+	<div class="message"></div>
 	<!-- WAZNE!! -->
 	<!-- w value powinno byc imie uzytkownika sciagane z bazy danych (php) -->
+	<div class="editpswER"><font color="red">Zapomniałeś o czymś?</font></div>
+	<label for="password">Stare Haslo:</label>	     <input type='password' value="" class='oldpassword' id='oldpassword' name='oldpassword' required="required"><br>
+	<label for="password">Nowe haslo:</label>	     <input type='password' value="" class='newpassword' id='newpassword' name='newpassword' required="required"><br>
+	<label for="password">Potwierdz haslo:</label>	 <input type='password' value="" class='vnewpassword' id='vnewpassword' name='vnewpassword' required="required"><br>
 	
-	<label for="password">Stare Haslo:</label>	     <input type='password' value="" class='pData' id='password' name='oldpassword' required="required"><br>
-	<label for="password">Nowe haslo:</label>	     <input type='password'  class='pData' id='password' name='newpassword' required="required"><br>
-	<label for="password">Potwierdz haslo:</label>	 <input type='password'  class='pData' id='password' name='vnewpassword' required="required"><br>
-	
-	<input type="submit" style="float:right" class="submit" name="pwd" value="Zapisz zmiany">
+	<input type="submit" style="float:right" class="editpsw" name="pwd" value="Zapisz zmiany">
 	</fieldset>
-</form>
 </div>
 <!-- -->
 
@@ -198,6 +148,6 @@ Witaj, <?php echo $nick;?>
 </body>
 <?php }
 else{
-echo '<br>Nie byłeś zalogowany albo zostałeś wylogowany<br><a href="login.php">Zaloguj się</a><br>';
+echo '<br>Nie byłeś zalogowany albo zostałeś wylogowany<br><a href="index.html">Zaloguj się</a><br>';
 }
 ?>

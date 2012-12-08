@@ -1,78 +1,74 @@
 ﻿<?php
 session_start();
 include ("connection.php");
-
-
-
-
-
-
 ?>
 
 
 
 <?php
-
-if ($_SESSION['zalogowany']){
+if (isset($_SESSION['zalogowany'])){
 $nick = $_SESSION['login'];
+$error = false;
+if ($_SESSION['dziennik'] == $nick){
+$zgl = mysql_query("SELECT * FROM zgloszenia WHERE NickUsera ='$nick' AND Temat='dodanie dziennika' AND Url='/adminAddDiary.php?id=$nick'");
+while ($row = mysql_fetch_array($zgl)){
+if ($row['StatusZgl'] <> 2){
+$error = true;
+}
+}
+}
+if (!$error){
 $spr1 = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM dzienniki WHERE IdDziennika='".$nick."' LIMIT 1"));
 $komunikaty = '';
 $searcherror = false;
 
 if ($spr1[0] == 1){
-
-
-if ($_POST['dodaj']){
-$nickred = $_POST['nickred'];
-$spr2 = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM uzytkownicy WHERE nick='".$nickred."' LIMIT 1"));
-$spr3 = mysql_fetch_array(mysql_query("SELECT COUNT(*) FROM redaktorzy WHERE NickRed='".$nickred."' AND NazwaDziennika = '".$nick."' LIMIT 1"));
-
-if ($spr2[0] <1){
- $komunikaty .= '<font color="red"><b>Użytkownik o podanim nicku :'.$nickred.' <br>nie istnieje, sprawdź pisownie i spróbuj jeszcze raz.</b></font><br />';
- $searcherror = true;
- }
-if  ($spr3[0] >=1){
-$komunikaty .= '<font color="red"><b>Użytkownik o podanim nicku :'.$nickred.' <br>istnieje już jako redaktor w Twoim dzienniku. </b></font>';
-$searcherror = true;
-}
-echo $nick.' '.$nickred;
-if ($nick == $nickred){
-
-$komunikaty .= '<font color="red"><b>Nie możesz dodać samego siebie.</b></font>';
-$searcherror = true;
-}
- else{
- if (!($searcherror)){
- $result = mysql_query("INSERT INTO redaktorzy (`NickRed`, `NazwaDziennika`, `EdycjaAutora`, `EdycjaRedaktora`) VALUES ('".$nickred."', '".$nick."', 'NIE', 'NIE')");
- if ($result){
- $komunikaty .= '<font color="blue"><b>Użytkownik: '.$nickred.' <br> został dodany poprawnie </b></font><br />';
- }
- else {
- echo ' '.mysql_error();
- }
- }
-}
-}
 $query = mysql_query("SELECT IdRed, NickRed FROM redaktorzy WHERE NazwaDziennika = '".$nick."'");
 
-
-
-
 ?>
-<title>Strona glowna</title>
+<title>Dodawanie redaktorów do dziennika</title>
 <link rel="stylesheet" type="text/css" href="Data/cssAddEditor.css">
 <script type="text/javascript" src="jquery-1.8.2.min.js"></script>
-
+<script>
+$(document).ready(function(){
+	$('.dodaj').click(function(){
+	var form_data = {
+			nickred: $("#wpisz").val(),
+			dodaj: true,
+			addred: 1
+		};
+	$.ajax({
+			type: "POST",
+			url: "addEditor2.php",
+			data: form_data,
+		}).done(function( response ) {
+		$("#message").html(response);
+		});
+	
+	});
+	$('.clickRed').click(function(){
+	if ($('input:radio[id=redaktorid]:checked').val() != null){
+	if ($(this).val() == 'Edytuj'){
+	$('.insideDiv').load('editEditor.php?id='+$('input:radio[id=redaktorid]:checked').val());
+	}
+	else if ($(this).val() == 'Usun'){
+	$('.insideDiv').load('delEditor.php?id='+$('input:radio[id=redaktorid]:checked').val());
+	}
+	}
+	});
+	
+});
+</script>
 </head>
 <body>
 <div id="inside">
 <fieldset>
-<p>Dodawanie nowego redaktora</p>
-<?php echo $komunikaty; ?>
-	<form name="searchEditorForm" method="POST" action="addEditor.php"><br>
-		<input type="text" id="wpisz" size="25" style="color:grey;" name="nickred" value="<?php if ($_POST['nickred']) {echo $_POST['nickred'];} else {?>Podaj tu nick do szukania<?php }?>">
-		<input type="submit" name="dodaj" value="Dodaj">
-	</form>
+<p>Dodawanie nowego redaktora:</p>
+<div id="message"></div>
+	<!--<form name="searchEditorForm" method="POST" action="addEditor.php"><br> -->
+		<input type="text" id="wpisz" size="25" style="color:grey;" name="nickred" required="required" value="<?php if (isset($_POST['nickred'])) {echo $_POST['nickred'];} else {?>Podaj tu nick do szukania<?php }?>">
+		<input type="submit" class="dodaj" id="dodaj" name="dodaj" value="Dodaj">
+	<!--</form>-->
 	</fieldset>
 </div>
 <br>
@@ -87,14 +83,14 @@ $query = mysql_query("SELECT IdRed, NickRed FROM redaktorzy WHERE NazwaDziennika
 	</tr>
 	<?php 
 	$i = 0;
-	echo ('<form method="POST" action="addEditor.php">');
+	//echo ('<form method="POST" action="addEditor.php">');
 	while ($row = mysql_fetch_array($query, MYSQL_BOTH)){
 	$i ++;
 	
 		echo '<tr>
 		<td  class="select">
 			
-				<input type="radio" name="redaktor" value="'.$row['IdRed'].'" required="required"><br>
+				<input id="redaktorid" type="radio" name="redaktor" value="'.$row['IdRed'].'" required="required"><br>
 			
 		</td>
 		<td class="indexed">
@@ -108,21 +104,20 @@ $query = mysql_query("SELECT IdRed, NickRed FROM redaktorzy WHERE NazwaDziennika
 		
 	</tr>';
 	}
-	
 echo'</table>
 <!-- Usuniecie Redaktora -->
-		    <input type="submit" value="Edytuj"';
+		    <input class="clickRed" type="submit" id="Edytuj" name="edit" value="Edytuj"';
 			if ($i ==0){
 			echo ('disabled="disabled"');
 			}
 			echo'>
-			<input type="submit" value="Usun"';
+			<input class="clickRed" type="submit" id="Usun" name="del" value="Usun"';
 			if ($i ==0){
 			echo ('disabled="disabled"');
 			}			
 			echo'>';
 			?>
-		</form>
+		<!--</form>-->
 		</fieldset>
 </div>
 <script>
@@ -133,12 +128,17 @@ echo'</table>
 </script>
 </body>
 <?php
+
+}
+
+else{
+echo 'Nie posiadasz swojego dziennika, możesz założyć go <a href="addDiary.php">TUTAJ</a><br />.';
+}
+}
+else { echo'<br><span style="color: red; font-weight: bold;">Twój dziennik nie został jeszcze zaakceptowany przed admina.</span><br>' ;
+}
 }
 else{
-echo 'Nie posiadasz swojego dziennika, możesz założyć go <a href="addDiary.php">TUTAJ</a><br />';
-}
-}
-else{
-echo '<br>Nie byłeś zalogowany albo zostałeś wylogowany<br><a href="login.php">Zaloguj się</a><br>';
+echo '<br>Nie byłeś zalogowany albo zostałeś wylogowany.<br><a href="login.php">Zaloguj się</a><br>';
 }
 ?>
